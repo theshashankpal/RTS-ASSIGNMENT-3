@@ -11,6 +11,8 @@
 #include <sys/mman.h>  /*Prot_READ constants*/
 #include <mqueue.h>    /* "O_CREAT" O_Constants*/
 #include <wait.h>      /* SIGCONT , SIGSTOP*/
+#include <math.h>
+#include <pthread.h>
 
 #define SHARED_MEMORY_NAME "/SYSSHAREDMEMORY"
 
@@ -25,8 +27,16 @@
 
 #define SHARED_MEMORY_NAME "/SYSSHAREDMEMORY"
 
-#define TAB -10
+#define TAB -20
 
+typedef struct _tasks
+{
+    float period;
+    float execution;
+    float deadline;
+    int jobs;
+}tasks;
 
+float find_busy_interval();
 
 #endif //ASSIGNMENT_H
