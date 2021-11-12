@@ -88,27 +88,21 @@ int main(int argc, char *argv[])
 
     fflush(stdout);
 
-    float length_busy_interval = find_busy_interval();
-    printf("\n");
-    printf("Length of a Busy Interval : %f", length_busy_interval);
-    printf("\n");
-
-    // Calculating no. of jobs released of every task in the busy_interval and storing them in the struct.
-    for (int i = 0; i < size; i++)
-    {
-        tasks_list[i].jobs = (int)ceil(length_busy_interval / tasks_list[i].period);
-    }
+    printf("\n\n");
 
     pthread_t tid_array[size];
+
+    // priority level loop
     for (int i = 0; i < size; i++)
     {
-        int *task_number = (int *)calloc(1, sizeof(int));
-        *task_number = i;
-        pthread_create(tid_array + i, NULL, runner, task_number);
+        int *priority_level_number = (int *)calloc(1, sizeof(int));
+        *priority_level_number = i;
+        pthread_create(tid_array + i, NULL, runner, priority_level_number);
     }
 
     for (int i = 0; i < size; i++)
     {
+
         if (pthread_join(tid_array[i], NULL) != 0)
         {
             perror("JOIN ");
@@ -117,6 +111,7 @@ int main(int argc, char *argv[])
     }
     printf("\n");
 
+    printf("Status of every level : ");
     for (int i = 0; i < size; i++)
     {
         printf("%d ", output_array[i]);
@@ -128,18 +123,22 @@ int main(int argc, char *argv[])
     {
         if (output_array[i] != 1)
         {
-            printf("Not schedulable \n");
+            printf(RED "Not schedulable \n" RESET);
+            fflush(stdout);
             exit(0);
         }
     }
 
-    printf("Schedulable \n");
+    printf("\n");
+
+    printf(GRN "Schedulable \n" RESET);
+    fflush(stdout);
 }
 
-float find_busy_interval()
+float find_busy_interval(int level)
 {
     float t = 0;
-    for (int i = 0; i < size; i++)
+    for (int i = 0; i <= level; i++)
     {
         t += tasks_list[i].execution;
     }
@@ -150,10 +149,12 @@ float find_busy_interval()
     {
         right_side = 0;
 
-        for (int i = 0; i < size; i++)
+        for (int i = 0; i <= level; i++)
         {
             right_side += ((int)ceil(t / tasks_list[i].period)) * tasks_list[i].execution;
         }
+
+        // printf("Busy interval Priority level : %d and intermediate t is : %f\n",level,t);
 
         if (t == right_side)
             break;
@@ -166,54 +167,126 @@ float find_busy_interval()
 
 void *runner(void *param)
 {
-    int *task_number = (int *)param;
 
-    float execution = tasks_list[*task_number].execution;
-    float period = tasks_list[*task_number].period;
-    float deadline = tasks_list[*task_number].deadline;
+    int *priorty_level = (int *)param; // priority level receieved
 
-    float t = tasks_list[*task_number].execution;
+    printf("Thread id : %ld with priority level : %d has started\n", pthread_self(), *priorty_level);
+
+    float busy_interval = find_busy_interval(*priorty_level);
+
+    printf("Busy interval of priority level %d is : %f\n", *priorty_level, busy_interval);
+    if (busy_interval < 0)
+    {
+        printf(RED"As negative busy interval , which means it did not converge, so priority level %d will never be satisfied\n"RESET, *priorty_level);
+        fflush(stdout);
+        pthread_exit(0);
+    }
+
+    int number_of_jobs = (int)ceil(busy_interval / tasks_list[*priorty_level].period);
+
+    printf("No. of Jobs priority level %d of lowest priority task will be : %d\n", *priorty_level, number_of_jobs);
+
+    float execution = tasks_list[*priorty_level].execution;
+    float period = tasks_list[*priorty_level].period;
+    float deadline = tasks_list[*priorty_level].deadline;
+
+    float t = execution;
 
     float right_side;
     int count_jobs_finished = 0;
-    for (int i = 0; i < tasks_list[*task_number].jobs; i++)
+    for (int i = 0; i < number_of_jobs; i++)
     {
         while (1)
         {
             right_side = 0;
 
             float first_part = (count_jobs_finished + 1) * execution;
-            float second_part = 0 ;
+            float second_part = 0;
 
-            for (int i = 0; i < *task_number; i++)
+            for (int i = 0; i < *priorty_level; i++)
             {
-                second_part += floor((t + count_jobs_finished * period) / tasks_list[i].period) * tasks_list[i].execution;
+                second_part += ceil((t + count_jobs_finished * period) / tasks_list[i].period) * tasks_list[i].execution;
             }
 
             right_side = first_part + second_part - count_jobs_finished * period;
-            printf("Task : %d & Job : %d right_side %f\n", *task_number, count_jobs_finished, right_side);
+            // printf("Task : %d & Job : %d right_side %f\n", *priorty_level, count_jobs_finished, right_side);
             if (t == right_side)
                 break;
             t = right_side;
         }
 
-        printf("Task : %d & Job : %d has t %f\n", *task_number, count_jobs_finished, t);
+        printf(CYN "Priority Level : %d & Job : %d has worst response time t : %f\n" RESET, *priorty_level, count_jobs_finished, t);
+        fflush(stdout);
 
-        if (t <= count_jobs_finished * period + deadline)
+        if (t <= deadline)
         {
-            printf("Task : %d & Job : %d satisfies deadline\n", *task_number, count_jobs_finished);
+            printf("Priority Level : %d & Job : %d satisfies deadline\n", *priorty_level, count_jobs_finished);
             count_jobs_finished++;
-            t = tasks_list[*task_number].execution;
+            t = execution;
         }
         else
         {
             break;
-            printf("Task : %d & Job : %d does not satisfy deadline\n", *task_number, count_jobs_finished);
+            printf("Task : %d & Job : %d does not satisfy deadline\n", *priorty_level, count_jobs_finished);
         }
     }
 
-    if (count_jobs_finished == tasks_list[*task_number].jobs)
-        output_array[*task_number] = 1;
+    if (count_jobs_finished == number_of_jobs)
+        output_array[*priorty_level] = 1;
 
     pthread_exit(0);
 }
+
+// void *runner2(void *param)
+// {
+//     int *priorty_level = (int *)param; // priority level receieved
+
+//     float execution = tasks_list[*priorty_level].execution;
+//     float period = tasks_list[*priorty_level].period;
+//     float deadline = tasks_list[*priorty_level].deadline;
+
+//     float t = tasks_list[*priorty_level].execution;
+
+//     float right_side;
+//     int count_jobs_finished = 0;
+//     for (int i = 0; i < tasks_list[*priorty_level].jobs; i++)
+//     {
+//         while (1)
+//         {
+//             right_side = 0;
+
+//             float first_part = (count_jobs_finished + 1) * execution;
+//             float second_part = 0;
+
+//             for (int i = 0; i < *priorty_level; i++)
+//             {
+//                 second_part += ceil((t + count_jobs_finished * period) / tasks_list[i].period) * tasks_list[i].execution;
+//             }
+
+//             right_side = first_part + second_part - count_jobs_finished * period;
+//             // printf("Task : %d & Job : %d right_side %f\n", *priorty_level, count_jobs_finished, right_side);
+//             if (t == right_side)
+//                 break;
+//             t = right_side;
+//         }
+
+//         printf("Task : %d & Job : %d has t %f\n", *priorty_level, count_jobs_finished, t);
+
+//         if (t <= count_jobs_finished * period + deadline)
+//         {
+//             printf("Task : %d & Job : %d satisfies deadline\n", *priorty_level, count_jobs_finished);
+//             count_jobs_finished++;
+//             t = tasks_list[*priorty_level].execution;
+//         }
+//         else
+//         {
+//             break;
+//             printf("Task : %d & Job : %d does not satisfy deadline\n", *priorty_level, count_jobs_finished);
+//         }
+//     }
+
+//     if (count_jobs_finished == tasks_list[*priorty_level].jobs)
+//         output_array[*priorty_level] = 1;
+
+//     pthread_exit(0);
+// }

@@ -37,6 +37,7 @@ typedef struct _tasks
     int jobs;
 }tasks;
 
-float find_busy_interval();
+float find_busy_interval(int);
+void *runner2(void *);
 
 #endif //ASSIGNMENT_H
