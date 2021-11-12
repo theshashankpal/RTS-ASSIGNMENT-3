@@ -215,21 +215,23 @@ void *runner(void *param)
             t = right_side;
         }
 
-        printf(CYN "Priority Level : %d & Job : %d has worst response time t : %f\n" RESET, *priorty_level, count_jobs_finished, t);
+        printf(CYN "Priority Level : %d & Job : %d has t : %f\n" RESET, *priorty_level, count_jobs_finished, t);
         fflush(stdout);
 
         if (t <= deadline)
         {
-            printf("Priority Level : %d & Job : %d satisfies deadline\n", *priorty_level, count_jobs_finished);
+            printf(GRN"Priority Level : %d & Job : %d satisfies deadline\n"RESET, *priorty_level, count_jobs_finished);
             count_jobs_finished++;
             t = execution;
         }
         else
         {
+            printf(RED"Task : %d & Job : %d does not satisfy deadline\n"RESET, *priorty_level, count_jobs_finished);
             break;
-            printf("Task : %d & Job : %d does not satisfy deadline\n", *priorty_level, count_jobs_finished);
         }
     }
+
+    fflush(stdout);
 
     if (count_jobs_finished == number_of_jobs)
         output_array[*priorty_level] = 1;
