@@ -190,8 +190,6 @@ float find_busy_interval(int level)
             right_side += ((int)ceil(t / tasks_list[i].period)) * tasks_list[i].execution;
         }
 
-        // printf("Busy interval Priority level : %d and intermediate t is : %f\n",level,t);
-
         if (t == right_side)
             break;
 
@@ -205,8 +203,6 @@ void *runner(void *param)
 {
 
     int *priorty_level = (int *)param; // priority level receieved
-
-    // printf("Thread id : %ld with priority level : %d has started\n", pthread_self(), *priorty_level);
 
     float busy_interval = find_busy_interval(*priorty_level);
 
@@ -245,7 +241,6 @@ void *runner(void *param)
             }
 
             right_side = first_part + second_part - count_jobs_finished * period;
-            // printf("Task : %d & Job : %d right_side %f\n", *priorty_level, count_jobs_finished, right_side);
             if (t == right_side)
                 break;
             t = right_side;
