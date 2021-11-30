@@ -11,6 +11,12 @@ int main(int argc, char *argv[])
 {
     printf("\n\n");
 
+    if(argc != 2)
+    {
+        printf("You've entered too few or too many arguments, please run the program again \n");
+        exit(EXIT_FAILURE);
+    }
+
     FILE *fp;
     char *line = NULL;
     fp = fopen(argv[1], "r"); // opening file in read mode.
