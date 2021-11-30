@@ -51,6 +51,13 @@ int main(int argc, char *argv[])
     // Closing the file descriptor and freeing up the memory used to read lines from a file.
     fclose(fp);
 
+    float utilization;
+
+    for (int i = 0; i < count; i++)
+    {
+        utilization += tasks_list[i].execution / tasks_list[i].period;
+    }
+
     // sorting based on period to determine priority.
     for (int i = 0; i < size; i++)
     {
@@ -87,6 +94,35 @@ int main(int argc, char *argv[])
     }
 
     fflush(stdout);
+
+    printf("\n\n");
+
+    if (utilization > 1)
+    {
+        printf("Utilization Ratio > 1, Hence :\n");
+        printf(RED "Not schedulable \n" RESET);
+        fflush(stdout);
+        exit(EXIT_FAILURE);
+    }
+
+    printf("Utilization Ratio : %f\n", utilization);
+
+    float Liu_Leyland_Bound = size * (pow((double)2, (double)((double)1 / (double)size)) - 1);
+
+    printf("Liu_Leyland Bound : %f \n", Liu_Leyland_Bound);
+
+    if (utilization <= Liu_Leyland_Bound)
+    {
+        printf("As utilization ratio is less than Liu-Leyland Bound, Hence : \n");
+        printf(GRN "Schedulable \n" RESET);
+        fflush(stdout);
+        exit(EXIT_SUCCESS);
+    }
+
+    else
+    {
+        printf("As utilization ratio is greater than Liu-Leyland Bound, Hence we need to check further : \n ");
+    }
 
     printf("\n\n");
 
@@ -170,14 +206,14 @@ void *runner(void *param)
 
     int *priorty_level = (int *)param; // priority level receieved
 
-    printf("Thread id : %ld with priority level : %d has started\n", pthread_self(), *priorty_level);
+    // printf("Thread id : %ld with priority level : %d has started\n", pthread_self(), *priorty_level);
 
     float busy_interval = find_busy_interval(*priorty_level);
 
     printf("Busy interval of priority level %d is : %f\n", *priorty_level, busy_interval);
     if (busy_interval < 0)
     {
-        printf(RED"As negative busy interval , which means it did not converge, so priority level %d will never be satisfied\n"RESET, *priorty_level);
+        printf(RED "As negative busy interval , which means it did not converge, so priority level %d will never be satisfied\n" RESET, *priorty_level);
         fflush(stdout);
         pthread_exit(0);
     }
@@ -220,13 +256,13 @@ void *runner(void *param)
 
         if (t <= deadline)
         {
-            printf(GRN"Priority Level : %d & Job : %d satisfies deadline\n"RESET, *priorty_level, count_jobs_finished);
+            printf(GRN "Priority Level : %d & Job : %d satisfies deadline\n" RESET, *priorty_level, count_jobs_finished);
             count_jobs_finished++;
             t = execution;
         }
         else
         {
-            printf(RED"Task : %d & Job : %d does not satisfy deadline\n"RESET, *priorty_level, count_jobs_finished);
+            printf(RED "Task : %d & Job : %d does not satisfy deadline\n" RESET, *priorty_level, count_jobs_finished);
             break;
         }
     }
@@ -238,57 +274,3 @@ void *runner(void *param)
 
     pthread_exit(0);
 }
-
-// void *runner2(void *param)
-// {
-//     int *priorty_level = (int *)param; // priority level receieved
-
-//     float execution = tasks_list[*priorty_level].execution;
-//     float period = tasks_list[*priorty_level].period;
-//     float deadline = tasks_list[*priorty_level].deadline;
-
-//     float t = tasks_list[*priorty_level].execution;
-
-//     float right_side;
-//     int count_jobs_finished = 0;
-//     for (int i = 0; i < tasks_list[*priorty_level].jobs; i++)
-//     {
-//         while (1)
-//         {
-//             right_side = 0;
-
-//             float first_part = (count_jobs_finished + 1) * execution;
-//             float second_part = 0;
-
-//             for (int i = 0; i < *priorty_level; i++)
-//             {
-//                 second_part += ceil((t + count_jobs_finished * period) / tasks_list[i].period) * tasks_list[i].execution;
-//             }
-
-//             right_side = first_part + second_part - count_jobs_finished * period;
-//             // printf("Task : %d & Job : %d right_side %f\n", *priorty_level, count_jobs_finished, right_side);
-//             if (t == right_side)
-//                 break;
-//             t = right_side;
-//         }
-
-//         printf("Task : %d & Job : %d has t %f\n", *priorty_level, count_jobs_finished, t);
-
-//         if (t <= count_jobs_finished * period + deadline)
-//         {
-//             printf("Task : %d & Job : %d satisfies deadline\n", *priorty_level, count_jobs_finished);
-//             count_jobs_finished++;
-//             t = tasks_list[*priorty_level].execution;
-//         }
-//         else
-//         {
-//             break;
-//             printf("Task : %d & Job : %d does not satisfy deadline\n", *priorty_level, count_jobs_finished);
-//         }
-//     }
-
-//     if (count_jobs_finished == tasks_list[*priorty_level].jobs)
-//         output_array[*priorty_level] = 1;
-
-//     pthread_exit(0);
-// }
